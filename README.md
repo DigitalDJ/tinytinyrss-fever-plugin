@@ -118,3 +118,11 @@ v1.4.6 - 2014/1/15
 v1.4.7 - 2014/1/15
 
 * added rewrite url function to module, since it was removed from tinytinyrss
+
+v2.0 - 2017/5/16
+
+* Fix ccache exceptions
+* Sync previously copied snipets with latest tt-rss source
+* General clean up / refactor
+* Replace clunky sanitization with what is provided by tt-rss
+* Use new Article class for enclosures
