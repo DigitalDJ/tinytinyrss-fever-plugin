@@ -54,7 +54,7 @@
         
     $handler = new FeverAPI($_REQUEST);
 
-    if ($handler->before()) {
+    if ($handler->before("")) {
         if (method_exists($handler, 'index')) {
             $handler->index();
         }
