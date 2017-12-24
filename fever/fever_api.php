@@ -24,12 +24,12 @@ class FeverAPI extends Handler {
     // find the user in the db with a particular api key
     private function setUser()
     {        
-        $apikey = isset($_REQUEST["api_key"]) ? $_REQUEST["api_key"] : "";
+        $apikey = isset($_REQUEST["api_key"]) ? clean($_REQUEST["api_key"]) : "";
         
         // Login for Mr. Reader
         if (strlen($apikey) <= 0 &&
             isset($_REQUEST["action"]) &&
-            $_REQUEST["action"] === "login" &&
+            clean($_REQUEST["action"]) === "login" &&
             isset($_REQUEST["email"])&&
             isset($_REQUEST["password"])) 
         {
@@ -49,10 +49,11 @@ class FeverAPI extends Handler {
                 
         if (strlen($apikey) > 0)
         {
-            $result = $this->dbh->query("SELECT owner_uid, content FROM ttrss_plugin_storage
-                                         WHERE name = '". $this->dbh->escape_string(self::PLUGIN_NAME) . "'");
+            $sth = $this->pdo->prepare("SELECT owner_uid, content FROM ttrss_plugin_storage
+                                        WHERE name = ?");
+            $sth->execute([self::PLUGIN_NAME]);
                                                      
-            while ($line = $this->dbh->fetch_assoc($result)) 
+            while ($line = $sth->fetch())
             {
                 $obj = unserialize($line["content"], array("allowed_classes" => FALSE));
                 if ($obj && 
@@ -77,7 +78,7 @@ class FeverAPI extends Handler {
         $this->xml = false;
         if (isset($_REQUEST["api"]))
         {
-            if (strtolower($_REQUEST["api"]) === "xml")
+            if (strtolower(clean($_REQUEST["api"])) === "xml")
             {
                 $this->xml = true;
             }
@@ -238,14 +239,15 @@ class FeverAPI extends Handler {
     // every authenticated method includes last_refreshed_on_time
     private function lastRefreshedOnTime()
     {
-        $result = $this->dbh->query("SELECT    " . SUBSTRING_FOR_DATE . "(last_updated,1,19) AS last_updated 
-                                     FROM ttrss_feeds
-                                     WHERE owner_uid = '" . $this->dbh->escape_string($_SESSION["uid"]) . "'
-                                     ORDER BY last_updated DESC");
+        $sth = $this->pdo->prepare("SELECT " . SUBSTRING_FOR_DATE . "(last_updated,1,19) AS last_updated 
+                                    FROM ttrss_feeds
+                                    WHERE owner_uid = ?
+                                    ORDER BY last_updated DESC");
+        $sth->execute([clean($_SESSION["uid"])]);
 
-        if ($this->dbh->num_rows($result) > 0)
+        if ($row = $sth->fetch())
         {
-            $last_refreshed_on_time = strtotime($this->dbh->fetch_result($result, 0, "last_updated"));
+            $last_refreshed_on_time = (int) strtotime($row["last_updated"]);
         }
         else
         {
@@ -271,15 +273,16 @@ class FeverAPI extends Handler {
         // TODO: ordering of child categories etc
         $groups = array();
 
-        $result = $this->dbh->query("SELECT    id, title, parent_cat
-                             FROM ttrss_feed_categories
-                             WHERE owner_uid = '" . $this->dbh->escape_string($_SESSION["uid"]) . "'
-                             ORDER BY order_id ASC");
+        $sth = $this->pdo->prepare("SELECT id, title, parent_cat
+                                    FROM ttrss_feed_categories
+                                    WHERE owner_uid = ?
+                                    ORDER BY order_id ASC");
+        $sth->execute([clean($_SESSION["uid"])]);
 
         $groupsToGroups = array();
         $groupsToTitle = array();
 
-        while ($line = $this->dbh->fetch_assoc($result))
+        while ($line = $sth->fetch())
         {
             if ($line["parent_cat"] === NULL)
             {
@@ -318,12 +321,13 @@ class FeverAPI extends Handler {
     {
         $feeds = array();
 
-        $result = $this->dbh->query("SELECT    id, title, feed_url, site_url, " . SUBSTRING_FOR_DATE . "(last_updated,1,19) AS last_updated
-                             FROM ttrss_feeds
-                             WHERE owner_uid = '" . $this->dbh->escape_string($_SESSION["uid"]) . "'
-                             ORDER BY order_id ASC");
+        $sth = $this->pdo->prepare("SELECT id, title, feed_url, site_url, " . SUBSTRING_FOR_DATE . "(last_updated,1,19) AS last_updated
+                                    FROM ttrss_feeds
+                                    WHERE owner_uid = ?
+                                    ORDER BY order_id ASC");
+        $sth->execute([clean($_SESSION["uid"])]);
 
-        while ($line = $this->dbh->fetch_assoc($result))
+        while ($line = $sth->fetch())
         {
             array_push($feeds, array("id" => intval($line["id"]),
                                      "favicon_id" => intval($line["id"]),
@@ -331,7 +335,7 @@ class FeverAPI extends Handler {
                                      "url" => $line["feed_url"],
                                      "site_url" => $line["site_url"],
                                      "is_spark" => 0, // unsupported
-                                     "last_updated_on_time" => strtotime($line["last_updated"])
+                                     "last_updated_on_time" => (int) strtotime($line["last_updated"])
                     ));
         }
         return $feeds;
@@ -341,13 +345,14 @@ class FeverAPI extends Handler {
     {
         $favicons = array();
 
-        $result = $this->dbh->query("SELECT    id
-                             FROM ttrss_feeds
-                             WHERE owner_uid = '" . $this->dbh->escape_string($_SESSION["uid"]) . "'
-                             ORDER BY order_id ASC");
+        $sth = $this->pdo->prepare("SELECT id
+                                    FROM ttrss_feeds
+                                    WHERE owner_uid = ?
+                                    ORDER BY order_id ASC");
+        $sth->execute([clean($_SESSION["uid"])]);
 
         // data = "image/gif;base64,<base64 encoded image>
-        while ($line = $this->dbh->fetch_assoc($result))
+        while ($line = $sth->fetch())
         {
             $filename = "feed-icons/" . $line["id"] . ".ico";
             if (file_exists($filename))
@@ -390,38 +395,30 @@ class FeverAPI extends Handler {
         $items = array();
 
         $item_limit = 50;
-        $where = " owner_uid = '" . $this->dbh->escape_string($_SESSION["uid"]) . "' AND ref_id = id ";
+        $where = " owner_uid = ? AND ref_id = id ";
+        $where_items = array();
+        array_push($where_items, clean($_SESSION["uid"]));
 
         if (isset($_REQUEST["feed_ids"]) || isset($_REQUEST["group_ids"])) // added 0.3
         {
             $feed_ids = array();
             if (isset($_REQUEST["feed_ids"]))
             {
-                $feed_ids = explode(",", $_REQUEST["feed_ids"]);
+                $feed_ids = explode(",", clean($_REQUEST["feed_ids"]));
             }
             if (isset($_REQUEST["group_ids"]))
             {
-                $group_ids = explode(",", $_REQUEST["group_ids"]);
-                $num_group_ids = sizeof($group_ids);
-                $groups_query = " AND cat_id IN (";
-                foreach ($group_ids as $group_id)
-                {
-                    if (is_numeric($group_id))
-                        $groups_query .= $this->dbh->escape_string(intval($group_id)) . ",";
-                    else
-                        $num_group_ids--;
-                }
-                if ($num_group_ids <= 0)
-                    $groups_query = " AND cat_id IN ('') ";
-                else
-                    $groups_query = trim($groups_query, ",") . ")";
-
-                $feeds_in_group_result = $this->dbh->query("SELECT id".
-                                                            "FROM ttrss_feeds".
-                                                            "WHERE owner_uid = '" . $this->dbh->escape_string($_SESSION["uid"]) . "' " . $groups_query);
+                $group_ids = array_map("intval", array_filter(explode(",", clean($_REQUEST["group_ids"])), "is_numeric"));
+                $group_ids_qmarks = arr_qmarks($group_ids);
+                
+                $sth = $this->pdo->prepare("SELECT id
+                                           FROM ttrss_feeds
+                                           WHERE owner_uid = ? AND cat_id IN ($group_ids_qmarks)");
+                                           
+                $sth->execute(array_merge([clean($_SESSION["uid"])], $group_ids));
 
                 $group_feed_ids = array();
-                while ($line = $this->dbh->fetch_assoc($feeds_in_group_result))
+                while ($line = $sth->fetch())
                 {
                     array_push($group_feed_ids, $line["id"]);
                 }
@@ -429,23 +426,11 @@ class FeverAPI extends Handler {
                 $feed_ids = array_unique(array_merge($feed_ids, $group_feed_ids));
             }
 
-            $query = " feed_id IN (";
-            $num_feed_ids = sizeof($feed_ids);
-            foreach ($feed_ids as $feed_id)
-            {
-                if (is_numeric($feed_id))
-                    $query.= $this->dbh->escape_string(intval($feed_id)) . ",";
-                else
-                    $num_feed_ids--;
-            }
-
-            if ($num_feed_ids <= 0)
-                $query = " feed_id IN ('') ";
-            else
-                $query = trim($query, ",") . ")";
-
-            if (!empty($where)) $where .= " AND ";
-            $where .= $query;
+            $feed_ids = array_map("intval", array_filter($feed_ids, "is_numeric"));
+            $feed_ids_qmarks = arr_qmarks($feed_ids);
+            
+            $where .= " AND feed_id IN ($feed_ids_qmarks) ";
+            $where_items = array_merge($where_items, $feed_ids);
         }
 
         if (isset($_REQUEST["max_id"])) // descending from most recently added
@@ -453,64 +438,48 @@ class FeverAPI extends Handler {
             // use the max_id argument to request the previous $item_limit items
             if (is_numeric($_REQUEST["max_id"]))
             {
-                $max_id = ($_REQUEST["max_id"] > 0) ? intval($_REQUEST["max_id"]) : 0;
+                $max_id = ($_REQUEST["max_id"] > 0) ? intval(clean($_REQUEST["max_id"])) : 0;
                 if ($max_id)
                 {
-                    if (!empty($where)) $where .= " AND ";
-                    $where .= "id < " . $this->dbh->escape_string($max_id) . " ";
-                }
-                else if (empty($where))
-                {
-                    $where .= "1";
+                    $where .= " AND id < ? ";
+                    array_push($where_items, $max_id);
                 }
 
-                $where .= " ORDER BY id DESC";
+                $where .= " ORDER BY id DESC ";
             }
         }
         else if (isset($_REQUEST["with_ids"])) // selective
         {
-            if (!empty($where)) $where .= " AND "; // group_ids & feed_ids don't make sense with this query but just in case
-
-            $item_ids = explode(",", $_REQUEST["with_ids"]);
-            $query = "id IN (";
-            $num_ids = sizeof($item_ids);
-            foreach ($item_ids as $item_id)
-            {
-                if (is_numeric($item_id))
-                    $query .= $this->dbh->escape_string(intval($item_id)) . ",";
-                else
-                    $num_ids--;
-            }
-
-            if ($num_ids <= 0)
-                $query = "id IN ('') ";
-            else
-                $query = trim($query, ",") . ") ";
-
-            $where .= $query;
+            $item_ids = array_map("intval", array_filter(explode(",", clean($_REQUEST["with_ids"])), "is_numeric"));
+            $item_ids_qmarks = arr_qmarks($item_ids);
+            
+            $where .= " AND id IN ($item_ids_qmarks) ";
+            $where_items = array_merge($where_items, $item_ids);
         }
         else // ascending from first added
         {
             if (is_numeric($_REQUEST["since_id"]))
             {
                 // use the since_id argument to request the next $item_limit items
-                $since_id     = isset($_GET["since_id"]) ? intval($_GET["since_id"]) : 0;
+                $since_id = isset($_GET["since_id"]) ? intval(clean($_GET["since_id"])) : 0;
 
                 if ($since_id)
                 {
-                    if (!empty($where)) $where .= " AND ";
-                    if ($this->id_hack) {
-                        $where .= "id > " . $this->dbh->escape_string($since_id*1000) . " "; // NASTY hack for Mr. Reader 2.0 on iOS and TinyTiny RSS Fever
-                    } else {
-                        $where .= "id > " . $this->dbh->escape_string($since_id) . " ";
+                    $where .= " AND id > ? ";
+                    
+                    if ($this->id_hack)
+                    {
+                        $val = $since_id * 1000; // NASTY hack for Mr. Reader 2.0 on iOS and TinyTiny RSS Fever
                     }
-                }
-                else if (empty($where))
-                {
-                    $where .= "1";
+                    else 
+                    {
+                        $val = $since_id;
+                    }
+                    
+                    array_push($where_items, $val);
                 }
 
-                $where .= " ORDER BY id ASC";
+                $where .= " ORDER BY id ASC ";
             }
         }
 
@@ -519,18 +488,19 @@ class FeverAPI extends Handler {
         /* classes/api.php getArticle */
         
         // id, feed_id, title, author, html, url, is_saved, is_read, created_on_time
-        $result = $this->dbh->query("SELECT ref_id, feed_id, title, link, content, id, marked, unread, author, 
-                                     " . SUBSTRING_FOR_DATE . "(updated,1,16) as updated,
-                                     (SELECT site_url FROM ttrss_feeds WHERE id = feed_id) AS site_url,
-                                     (SELECT hide_images FROM ttrss_feeds WHERE id = feed_id) AS hide_images
-                                     FROM ttrss_entries, ttrss_user_entries
-                                     WHERE " . $where);
+        $sth = $this->pdo->prepare("SELECT ref_id, feed_id, title, link, content, id, marked, unread, author, 
+                                   " . SUBSTRING_FOR_DATE . "(updated,1,16) as updated,
+                                   (SELECT site_url FROM ttrss_feeds WHERE id = feed_id) AS site_url,
+                                   (SELECT hide_images FROM ttrss_feeds WHERE id = feed_id) AS hide_images
+                                   FROM ttrss_entries, ttrss_user_entries
+                                   WHERE " . $where);
+        $sth->execute($where_items);
 
-        while ($line = $this->dbh->fetch_assoc($result))
+        while ($line = $sth->fetch())
         {            
             $line_content = sanitize(
                                 $line["content"],
-                                sql_bool_to_bool($line['hide_images']),
+                                API::param_to_bool($line['hide_images']),
                                 false, $line["site_url"], false, $line["id"]);
             
             if ($this->add_attached_files){
@@ -560,9 +530,9 @@ class FeverAPI extends Handler {
                                      "author" => $line["author"],
                                      "html" => $line_content,
                                      "url" => $line["link"],
-                                     "is_saved" => (sql_bool_to_bool($line["marked"]) ? 1 : 0),
-                                     "is_read" => ( (!sql_bool_to_bool($line["unread"])) ? 1 : 0),
-                                     "created_on_time" => strtotime($line["updated"])
+                                     "is_saved" => (API::param_to_bool($line["marked"]) ? 1 : 0),
+                                     "is_read" => ( (!API::param_to_bool($line["unread"])) ? 1 : 0),
+                                     "created_on_time" => (int) strtotime($line["updated"])
                     ));
         }
 
@@ -574,14 +544,14 @@ class FeverAPI extends Handler {
         // number of total items
         $total_items = 0;
 
-        $where = " owner_uid = '" . $this->dbh->escape_string($_SESSION["uid"]) . "'";
-        $result = $this->dbh->query("SELECT COUNT(ref_id) as total_items
-                                     FROM ttrss_user_entries
-                                     WHERE " . $where);
+        $sth = $this->pdo->prepare("SELECT COUNT(ref_id) as total_items
+                                    FROM ttrss_user_entries
+                                    WHERE owner_uid = ?");
+        $sth->execute([clean($_SESSION["uid"])]);
 
-        if ($this->dbh->num_rows($result) > 0)
+        if ($line = $sth->fetch())
         {
-            $total_items = $this->dbh->fetch_result($result, 0, "total_items");
+            $total_items = $line["total_items"];
         }
 
         return $total_items;
@@ -591,15 +561,16 @@ class FeverAPI extends Handler {
     {
         $feeds_groups = array();
 
-        $result = $this->dbh->query("SELECT    id, cat_id
-                             FROM ttrss_feeds
-                             WHERE owner_uid = '" . $this->dbh->escape_string($_SESSION["uid"]) . "'
-                             AND cat_id IS NOT NULL
-                             ORDER BY id ASC");
+        $sth = $this->pdo->prepare("SELECT id, cat_id
+                                    FROM ttrss_feeds
+                                    WHERE owner_uid = ?
+                                    AND cat_id IS NOT NULL
+                                    ORDER BY id ASC");
+        $sth->execute([clean($_SESSION["uid"])]);
 
         $groupsToFeeds = array();
 
-        while ($line = $this->dbh->fetch_assoc($result))
+        while ($line = $sth->fetch())
         {
             if (!array_key_exists($line["cat_id"], $groupsToFeeds))
                 $groupsToFeeds[$line["cat_id"]] = array();
@@ -623,11 +594,12 @@ class FeverAPI extends Handler {
     function getUnreadItemIds()
     {
         $unreadItemIdsCSV = "";
-        $result = $this->dbh->query("SELECT ref_id
-                             FROM ttrss_user_entries
-                             WHERE owner_uid = '" . $this->dbh->escape_string($_SESSION["uid"]) . "' AND unread = true"); // ORDER BY red_id DESC
+        $sth = $this->pdo->prepare("SELECT ref_id
+                                    FROM ttrss_user_entries
+                                    WHERE owner_uid = ? AND unread = true"); // ORDER BY red_id DESC
+        $sth->execute([clean($_SESSION["uid"])]);
 
-        while ($line = $this->dbh->fetch_assoc($result))
+        while ($line = $sth->fetch())
         {
             $unreadItemIdsCSV .= $line["ref_id"] . ",";
         }
@@ -639,11 +611,12 @@ class FeverAPI extends Handler {
     function getSavedItemIds()
     {
         $savedItemIdsCSV = "";
-        $result = $this->dbh->query("SELECT ref_id
-                             FROM ttrss_user_entries
-                             WHERE owner_uid = '" . $this->dbh->escape_string($_SESSION["uid"]) . "' AND marked = true");
+        $sth = $this->pdo->prepare("SELECT ref_id
+                                    FROM ttrss_user_entries
+                                    WHERE owner_uid = ? AND marked = true");
+        $sth->execute([clean($_SESSION["uid"])]);
 
-        while ($line = $this->dbh->fetch_assoc($result))
+        while ($line = $sth->fetch())
         {
             $savedItemIdsCSV .= $line["ref_id"] . ",";
         }
@@ -656,9 +629,9 @@ class FeverAPI extends Handler {
     {
         /* classes/api.php updateArticle */
         
-        $article_ids = array_filter(explode(",", $this->dbh->escape_string($id)), is_numeric);
-        $mode = (int) $this->dbh->escape_string($mode);
-        $field_raw = (int)$this->dbh->escape_string($field_raw);        
+        $article_ids = array_map("intval", array_filter(explode(",", clean($id)), "is_numeric"));
+        $mode = (int) clean($mode);
+        $field_raw = (int) clean($field_raw);        
         
         $field = "";
         $set_to = "";
@@ -684,18 +657,22 @@ class FeverAPI extends Handler {
         }
 
         if ($field && $set_to && count($article_ids) > 0) {
-            $article_ids = join(", ", $article_ids);
-
-            $result = $this->dbh->query("UPDATE ttrss_user_entries SET $field = $set_to $additional_fields WHERE ref_id IN ($article_ids) AND owner_uid = '" . $this->dbh->escape_string($_SESSION["uid"]) . "'");
-
-            $num_updated = $this->dbh->affected_rows($result);
+            $article_qmarks = arr_qmarks($article_ids);
+            
+            $sth = $this->pdo->prepare("UPDATE ttrss_user_entries SET 
+                                        $field = $set_to $additional_fields
+                                        WHERE ref_id IN ($article_qmarks) AND owner_uid = ?");
+            $sth->execute(array_merge($article_ids, [clean($_SESSION["uid"])]));
+            
+            $num_updated = $sth->rowCount();
 
             if ($num_updated > 0 && $field == "unread") {
-                $result = $this->dbh->query("SELECT DISTINCT feed_id FROM ttrss_user_entries
-                    WHERE ref_id IN ($article_ids)");
+                $sth = $this->pdo->prepare("SELECT DISTINCT feed_id FROM ttrss_user_entries
+                                            WHERE ref_id IN ($article_qmarks)");
+                $sth->execute($article_ids);
 
-                while ($line = $this->dbh->fetch_assoc($result)) {
-                    CCache::update($line["feed_id"], $_SESSION["uid"]);
+                while ($line = $sth->fetch()) {
+                    CCache::update($line["feed_id"], clean($_SESSION["uid"]));
                 }
             }
         }
@@ -737,36 +714,38 @@ class FeverAPI extends Handler {
                 // if not special feed
                 if ($id > 0)
                 {
-                    db_query("UPDATE ttrss_user_entries
-                        SET unread = false, last_read = NOW() WHERE ref_id IN
-                            (SELECT id FROM
-                                (SELECT id FROM ttrss_entries, ttrss_user_entries WHERE ref_id = id
-                                    AND owner_uid = '" . $this->dbh->escape_string($_SESSION["uid"]) . "' AND unread = true AND feed_id IN
-                                        (SELECT id FROM ttrss_feeds WHERE cat_id IN (" . intval($id) . ")) AND updated < '" . date("Y-m-d H:i:s", $before) . "' ) as tmp)");
-
+                    $sth = $this->pdo->prepare("UPDATE ttrss_user_entries
+                                                SET unread = false, last_read = NOW() WHERE ref_id IN
+                                                (SELECT id FROM
+                                                    (SELECT DISTINCT id FROM ttrss_entries, ttrss_user_entries WHERE ref_id = id
+                                                     AND owner_uid = ? AND unread = true AND feed_id IN
+                                                         (SELECT id FROM ttrss_feeds WHERE cat_id IN (?)) AND updated < ? ) as tmp)");
+                    $sth->execute([clean($_SESSION["uid"]), intval($id), date("Y-m-d H:i:s", $before)]);
                 }
                 // this is "all" to fever, but internally "all" is -4
                 else if ($id == 0)
                 {
                     $id = -4;
-                    db_query("UPDATE ttrss_user_entries
-                            SET unread = false, last_read = NOW() WHERE ref_id IN
-                                (SELECT id FROM
-                                    (SELECT id FROM ttrss_entries, ttrss_user_entries WHERE ref_id = id
-                                        AND owner_uid = '" . $this->dbh->escape_string($_SESSION["uid"]) . "' AND unread = true AND updated < '" . date("Y-m-d H:i:s", $before) . "' ) as tmp)");
+                    $sth = $this->pdo->prepare("UPDATE ttrss_user_entries
+                                                SET unread = false, last_read = NOW() WHERE ref_id IN
+                                                (SELECT id FROM
+                                                    (SELECT DISTINCT id FROM ttrss_entries, ttrss_user_entries WHERE ref_id = id
+                                                     AND owner_uid = ? AND unread = true AND updated < ? ) as tmp)");
+                    $sth->execute([clean($_SESSION["uid"]), date("Y-m-d H:i:s", $before)]);
                 }
             }
             // not a category
             else if ($id > 0)
             {
-                db_query("UPDATE ttrss_user_entries
-                    SET unread = false, last_read = NOW() WHERE ref_id IN
-                        (SELECT id FROM
-                            (SELECT id FROM ttrss_entries, ttrss_user_entries WHERE ref_id = id
-                                AND owner_uid = '" . $this->dbh->escape_string($_SESSION["uid"]) . "' AND unread = true AND feed_id = " . intval($id) . " AND updated < '" . date("Y-m-d H:i:s", $before) . "' ) as tmp)");
+                $sth = $this->pdo->prepare("UPDATE ttrss_user_entries
+                                            SET unread = false, last_read = NOW() WHERE ref_id IN
+                                            (SELECT id FROM
+                                                (SELECT DISTINCT id FROM ttrss_entries, ttrss_user_entries WHERE ref_id = id
+                                                 AND owner_uid = ? AND unread = true AND feed_id = ? AND updated < ? ) as tmp)");
+                $sth->execute([clean($_SESSION["uid"]), intval($id), date("Y-m-d H:i:s", $before)]);
 
             }
-            CCache::update($id, $_SESSION["uid"], $cat);
+            CCache::update($id, clean($_SESSION["uid"]), $cat);
         }
     }
 
@@ -820,7 +799,7 @@ class FeverAPI extends Handler {
 
         if (isset($_REQUEST["mark"], $_REQUEST["as"], $_REQUEST["id"]))
         {
-            foreach (explode(",", $_REQUEST["id"]) as $id) {
+            foreach (explode(",", clean($_REQUEST["id"])) as $id) {
                 $this->markId($id);
             }
         }
@@ -837,17 +816,17 @@ class FeverAPI extends Handler {
     {
         if (is_numeric($id))
         {
-            $before = (isset($_REQUEST["before"])) ? $_REQUEST["before"] : null;
+            $before = (isset($_REQUEST["before"])) ? clean($_REQUEST["before"]) : null;
             if ($before !== null && $before > pow(10,10)) {
                 $before = round($before / 1000);
             }
             
-            $method_name = "set" . ucfirst($_REQUEST["mark"]) . "As" . ucfirst($_REQUEST["as"]);
+            $method_name = "set" . ucfirst(clean($_REQUEST["mark"])) . "As" . ucfirst(clean($_REQUEST["as"]));
 
             if (method_exists($this, $method_name))
             {
                 $this->{$method_name}(intval($id), $before);
-                switch($_REQUEST["as"])
+                switch(clean($_REQUEST["as"]))
                 {
                     case "read":
                     case "unread":
