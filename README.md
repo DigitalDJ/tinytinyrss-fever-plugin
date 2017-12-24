@@ -127,7 +127,7 @@ v2.0 - 2017/5/16
 * Replace clunky sanitization with what is provided by tt-rss
 * Use new Article class for enclosures
 
-v2.0 - 2017/12/25
+v2.1 - 2017/12/25
 
 * Sync previously copied snipets with latest tt-rss source
 * Use PDO API for DB queries
