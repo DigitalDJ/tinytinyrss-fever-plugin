@@ -369,8 +369,89 @@ class FeverAPI extends Handler {
     function getLinks()
     {
         // TODO: is there a 'hot links' alternative in ttrss?
-        // use ttrss_user_entries / score>0
+        // use ttrss_user_entries / score > 0 / unread
         $links = array();
+
+        $item_limit = 50;
+        $where = "owner_uid = ? AND ref_id = id AND score > 0 AND unread = true";
+        $where_items = array();
+        array_push($where_items, clean($_SESSION["uid"]));
+
+        if (isset($_REQUEST["range"]))
+        {
+            // use the range argument to request a limited "updated" items
+            if (is_numeric($_REQUEST["range"]))
+                {
+                $range = ($_REQUEST["range"] > 0) ? intval(clean($_REQUEST["range"])) : 0;
+                if ($range)
+                {
+
+                    $offset = 0;
+                    if (isset($_REQUEST["offset"]))
+                    {
+                        // use the range argument to request a limited "updated" items
+                        if (is_numeric($_REQUEST["offset"]))
+                        {
+                            $offset = ($_REQUEST["offset"] > 0) ? intval(clean($_REQUEST["offset"])) : 0;
+                        }
+                    }
+
+                    if ($range) {
+                        if ($offset == 0) {
+                            //range > 1 AND offset = 0
+                            $where .= " AND updated < NOW()";
+                            $where .= " AND updated > NOW()-INTERVAL ? DAY";
+                            array_push($where_items, $range);
+                        } else {
+                            //range > 1 AND offset > 0
+                            $where .= " AND updated < NOW()-INTERVAL ? DAY";
+                            $where .= " AND updated > NOW()-INTERVAL ? DAY";
+                            array_push($where_items, $offset, $offset+$range);
+                        }
+                    }
+                }
+            }
+        }
+
+        $where .= " ORDER BY score DESC, updated DESC" ;
+
+        if (is_numeric($_REQUEST["page"]))
+        {
+            // use the page argument to request the next $item_limit items
+            // page = 1 --> 1st Page will be convertet to 0
+            $page = isset($_REQUEST["page"]) ? intval(clean($_REQUEST["page"]))-1 : 0;
+            $page = ($page<0) ? 0 : $page;
+
+            $where .= " LIMIT " . intval($page * $item_limit) . ", " . $item_limit;
+            // array_push($where_items, $item_limit);
+            // array_push($where_items, ($page * $item_limit));
+        } else {
+            $where .= " LIMIT ?";
+            array_push($where_items, $item_limit);
+        }
+
+        /* classes/api.php getLinks */
+
+        // id, feed_id, title, author, html, url, is_saved, is_read, created_on_time
+        $sth = $this->pdo->prepare("SELECT ref_id, feed_id, title, link, score, id, marked, unread, updated
+                                   FROM ttrss_entries, ttrss_user_entries
+                                   WHERE " . $where);
+        $sth->execute($where_items);
+
+        while ($line = $sth->fetch())
+        {
+            array_push($links, array("id" => intval($line["id"]),
+                                     "feed_id" => intval($line["feed_id"]),
+                                     "item_id" => intval($line["ref_id"]),
+                                     "temperature" => intval($line["score"]),
+                                     "is_item" => 1,
+                                     "is_local" => 1,
+                                     "is_saved" => (API::param_to_bool($line["marked"]) ? 1 : 0),
+                                     "title" => $line["title"],
+                                     "url" => $line["link"],
+                                     "item_ids" => ""
+            ));
+        }
 
         return $links;
     }
@@ -625,6 +706,30 @@ class FeverAPI extends Handler {
         return $savedItemIdsCSV;
     }
 
+    function getEqualItems($id)
+    {
+        //get all ids which have identical links (Reference is found by id)
+        $sth = $this->pdo->prepare("SELECT id 
+                                    FROM ttrss_entries,ttrss_user_entries
+                                    WHERE id=ref_id AND owner_uid = ?
+                                    AND link=(SELECT link FROM ttrss_entries WHERE id = ?)");
+        $sth->execute(array_merge([clean($_SESSION["uid"]), $id]));
+
+        $ids = "";
+        while ($line = $sth->fetch())
+        {
+            $ids .= $line["id"] . ",";
+        }
+        $ids = trim($ids, ",");
+
+        if (self::DEBUG) {
+            // add request to debug log
+            error_log(print_r($ids, true));
+        }
+
+        return $ids;
+    }
+
     function setItem($id, $field_raw, $mode)
     {
         /* classes/api.php updateArticle */
@@ -680,12 +785,15 @@ class FeverAPI extends Handler {
 
     function setItemAsRead($id)
     {
-        $this->setItem($id, 1, 0);
+        //action is true for all Equal Items
+        $ids = $this->getEqualItems($id);
+        $this->setItem($ids, 1, 0);
     }
 
     function setItemAsUnread($id)
     {
-        $this->setItem($id, 1, 1);
+        $ids = $this->getEqualItems($id);
+        $this->setItem($ids, 1, 1);
     }
 
     function setItemAsSaved($id)
