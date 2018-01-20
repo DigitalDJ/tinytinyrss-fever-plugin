@@ -706,6 +706,30 @@ class FeverAPI extends Handler {
         return $savedItemIdsCSV;
     }
 
+    function getEqualItems($id)
+    {
+        //get all ids which have identical links (Reference is found by id)
+        $sth = $this->pdo->prepare("SELECT id 
+                                    FROM ttrss_entries,ttrss_user_entries
+                                    WHERE id=ref_id AND owner_uid = ?
+                                    AND link=(SELECT link FROM ttrss_entries WHERE id = ?)");
+        $sth->execute(array_merge([clean($_SESSION["uid"]), $id]));
+
+        $ids = "";
+        while ($line = $sth->fetch())
+        {
+            $ids .= $line["id"] . ",";
+        }
+        $ids = trim($ids, ",");
+
+        if (self::DEBUG) {
+            // add request to debug log
+            error_log(print_r($ids, true));
+        }
+
+        return $ids;
+    }
+
     function setItem($id, $field_raw, $mode)
     {
         /* classes/api.php updateArticle */
@@ -761,12 +785,15 @@ class FeverAPI extends Handler {
 
     function setItemAsRead($id)
     {
-        $this->setItem($id, 1, 0);
+        //action is true for all Equal Items
+        $ids = $this->getEqualItems($id);
+        $this->setItem($ids, 1, 0);
     }
 
     function setItemAsUnread($id)
     {
-        $this->setItem($id, 1, 1);
+        $ids = $this->getEqualItems($id);
+        $this->setItem($ids, 1, 1);
     }
 
     function setItemAsSaved($id)
