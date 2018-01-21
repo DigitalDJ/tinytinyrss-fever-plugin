@@ -422,7 +422,7 @@ class FeverAPI extends Handler {
             $page = isset($_REQUEST["page"]) ? intval(clean($_REQUEST["page"]))-1 : 0;
             $page = ($page<0) ? 0 : $page;
 
-            $where .= " LIMIT " . intval($page * $item_limit) . ", " . $item_limit;
+            $where .= " LIMIT " . $item_limit . " OFFSET " . intval($page * $item_limit);
             // array_push($where_items, $item_limit);
             // array_push($where_items, ($page * $item_limit));
         } else {
