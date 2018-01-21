@@ -55,7 +55,7 @@ class FeverAPI extends Handler {
                                                      
             while ($line = $sth->fetch())
             {
-                $obj = unserialize($line["content"], array("allowed_classes" => FALSE));
+                $obj = unserialize($line["content"]);
                 if ($obj && 
                     isset($obj["password"]) && 
                     strtolower($obj["password"]) === strtolower($apikey))
