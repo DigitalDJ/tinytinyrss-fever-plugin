@@ -26,6 +26,8 @@ class Fever extends Plugin {
         print "<p>" . __("Since the Fever API uses a different authentication mechanism to Tiny Tiny RSS, you must set a separate password to login. This password may be the same as your Tiny Tiny RSS password.") . "</p>";
 
         print "<p>" . __("Set a password to login with Fever:") . "</p>";
+        
+        print "<p><b>" . __("WARNING: The Fever API uses an UNSECURE unsalted MD5 hash. Consider the use of a disposable application-specific password and use HTTPS.") . "</b></p>";
 
         print "<form dojoType=\"dijit.form.Form\">";
 
@@ -62,8 +64,9 @@ class Fever extends Plugin {
     {
         if (isset($_POST["password"]) && isset($_SESSION["uid"]))
         {
-            $result = db_query("SELECT login FROM ttrss_users WHERE id = '" . db_escape_string($_SESSION["uid"]) . "'");
-            if ($line = db_fetch_assoc($result))
+            $sth = $this->pdo->prepare("SELECT login FROM ttrss_users WHERE id = ?");
+            $sth->execute([clean($_SESSION["uid"])]);
+            if ($line = $sth->fetch())
             {
                 $password = md5($line["login"] . ":" . $_POST["password"]);
                 $this->host->set($this, "password", $password);
