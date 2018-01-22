@@ -1,10 +1,10 @@
-# Tiny Tiny RSS Fever API plugin
-
-See also [Fever API](fever-api.md)
+# Tiny Tiny RSS Fever API Plugin
 
 ## Description
 
-This plugin is an open source module for Tiny Tiny RSS which simulates the Fever API for reading the RSS Feeds with your Fever compatible clients.
+This is an open source plugin for Tiny Tiny RSS which simulates the Fever API. This allows Fever compatible RSS clients to use Tiny Tiny RSS.
+
+See also: [Fever API](fever-api.md)
 
 - - -
 
