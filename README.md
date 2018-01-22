@@ -87,7 +87,7 @@ In the file ```fever_api.php``` there are two flags for debugging at the beginni
 
 If you have problems with authentication after updating the plugin, try to re-enter the password in Tiny Tiny RSS Fever plugin and save it again.
 
-If you encounter any defects please [create an issue](https://github.com/DigitalDJ/tinytinyrss-fever-plugin/issues) on GitHub.
+If you encounter any defects please [create an issue](https://github.com/DigitalDJ/tinytinyrss-fever-plugin/issues/new) on GitHub.
 
 Please include any debug logs and any output from the Tiny Tiny RSS `Error Log` (located in Preferences > System).
 
