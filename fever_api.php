@@ -575,7 +575,11 @@ class FeverAPI extends Handler {
                                    (SELECT hide_images FROM ttrss_feeds WHERE id = feed_id) AS hide_images
                                    FROM ttrss_entries, ttrss_user_entries
                                    WHERE " . $where);
-        $sth->execute($where_items);
+				try {
+				  $sth->execute($where_items);
+				} catch (PDOException $e) {
+					/* nop */
+				}
 
         while ($line = $sth->fetch())
         {            
