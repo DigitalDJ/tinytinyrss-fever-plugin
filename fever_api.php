@@ -532,7 +532,11 @@ class FeverAPI extends Handler {
         else if (isset($_REQUEST["with_ids"])) // selective
         {
             $item_ids = array_map("intval", array_filter(explode(",", clean($_REQUEST["with_ids"])), "is_numeric"));
-            $item_ids_qmarks = arr_qmarks($item_ids);
+            $item_ids_count_arr = array(1,"1");
+            if (count($item_ids) >= 1) {
+                $item_ids_count_arr = $item_ids;
+            }
+            $item_ids_qmarks = arr_qmarks($item_ids_count_arr);
             
             $where .= " AND id IN ($item_ids_qmarks) ";
             $where_items = array_merge($where_items, $item_ids);
