@@ -783,10 +783,6 @@ class FeverAPI extends Handler {
                 $sth = $this->pdo->prepare("SELECT DISTINCT feed_id FROM ttrss_user_entries
                                             WHERE ref_id IN ($article_qmarks)");
                 $sth->execute($article_ids);
-
-                while ($line = $sth->fetch()) {
-                    CCache::update($line["feed_id"], clean($_SESSION["uid"]));
-                }
             }
         }
     }
@@ -861,7 +857,6 @@ class FeverAPI extends Handler {
                 $sth->execute([clean($_SESSION["uid"]), intval($id), date("Y-m-d H:i:s", $before)]);
 
             }
-            CCache::update($id, clean($_SESSION["uid"]), $cat);
         }
     }
 
