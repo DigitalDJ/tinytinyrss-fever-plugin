@@ -3,9 +3,9 @@ class Fever extends Plugin {
     private $host;
 
     function about() {
-        return array(2.2,
+        return array(2.3,
             "Emulates the Fever API for Tiny Tiny RSS",
-            "DigitalDJ, mestrode & murphy");
+            "DigitalDJ, mestrode & murphy, eric-pierce");
     }
 
     function init($host) {
