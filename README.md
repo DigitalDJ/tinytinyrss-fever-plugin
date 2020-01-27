@@ -171,3 +171,8 @@ v2.2 - 2018/01/22
 * Fix finding config.php for obscure tt-rss installations
 * Use PDO query for saving passwords
 * Fix PHP5 only having single unserialize argument
+
+v2.3 - 2020/01/27
+
+* Fix error thrown when str_repeat() is passed negative length
+* Removes references to CCache class which has been scrapped and replaced
