@@ -1,4 +1,8 @@
 <?php
+function param_to_bool($p) {
+	return $p && ($p !== "f" && $p !== "false");
+}
+
 class FeverAPI extends Handler {
 
     const API_LEVEL  = 3;
@@ -446,7 +450,7 @@ class FeverAPI extends Handler {
                                      "temperature" => intval($line["score"]),
                                      "is_item" => 1,
                                      "is_local" => 1,
-                                     "is_saved" => (API::param_to_bool($line["marked"]) ? 1 : 0),
+                                     "is_saved" => (param_to_bool($line["marked"]) ? 1 : 0),
                                      "title" => $line["title"],
                                      "url" => $line["link"],
                                      "item_ids" => ""
@@ -589,11 +593,11 @@ class FeverAPI extends Handler {
         {            
             $line_content = sanitize(
                                 $line["content"],
-                                API::param_to_bool($line['hide_images']),
+                                param_to_bool($line['hide_images']),
                                 false, $line["site_url"], false, $line["id"]);
             
             if ($this->add_attached_files){
-                $enclosures = Article::get_article_enclosures($line["id"]);
+                $enclosures = Article::_get_enclosures($line["id"]);
                 if (count($enclosures) > 0) {
                     $line_content .= '<ul type="lower-greek">';
                     foreach ($enclosures as $enclosure) {
@@ -619,8 +623,8 @@ class FeverAPI extends Handler {
                                      "author" => $line["author"],
                                      "html" => $line_content,
                                      "url" => $line["link"],
-                                     "is_saved" => (API::param_to_bool($line["marked"]) ? 1 : 0),
-                                     "is_read" => ( (!API::param_to_bool($line["unread"])) ? 1 : 0),
+                                     "is_saved" => (param_to_bool($line["marked"]) ? 1 : 0),
+                                     "is_read" => ( (!param_to_bool($line["unread"])) ? 1 : 0),
                                      "created_on_time" => (int) strtotime($line["updated"])
                     ));
         }
