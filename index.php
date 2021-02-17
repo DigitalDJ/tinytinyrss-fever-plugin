@@ -53,7 +53,7 @@
         ob_start();
     }
         
-    if ($_REQUEST["sid"]) {
+    if (isset($_REQUEST["sid"])) {
         session_id($_REQUEST["sid"]);
         @session_start();
     } else if (defined('_API_DEBUG_HTTP_ENABLED')) {
