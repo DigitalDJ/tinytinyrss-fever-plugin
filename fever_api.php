@@ -294,8 +294,10 @@ class FeverAPI extends Handler {
                 {
                     $groupsToGroups[-1] = array();
                 }
-
-                array_push($groupsToGroups[-1], $line["order_id"] . "-" . $line["id"]);
+		if (isset($line["order_id"]) && isset($line["id"]))
+		{
+                	array_push($groupsToGroups[-1], $line["order_id"] . "-" . $line["id"]);
+		}
             }
             else
             {
@@ -303,8 +305,10 @@ class FeverAPI extends Handler {
                 {
                     $groupsToGroups[$line["parent_cat"]] = array();
                 }
-
-                array_push($groupsToGroups[$line["parent_cat"]], $line["order_id"] . "-" . $line["id"]);
+		if (isset($line["order_id"]) && isset($line["id"]))
+		{
+                	array_push($groupsToGroups[$line["parent_cat"]], $line["order_id"] . "-" . $line["id"]);
+		}
             }
 
             $groupsToTitle[$line["id"]] = $line["title"];
