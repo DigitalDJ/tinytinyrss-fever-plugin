@@ -176,3 +176,8 @@ v2.3 - 2020/01/27
 
 * Fix error thrown when str_repeat() is passed negative length
 * Removes references to CCache class which has been scrapped and replaced
+
+v2.4 - 2021/02/16
+
+* Includes fixes by froks to fix for the latest changes in tiny-tiny-rss
+* Includes updates to account for the "Undefined array key' error upgrade from notice to warning in PHP8
