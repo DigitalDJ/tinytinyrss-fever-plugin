@@ -44,9 +44,9 @@ class Fever extends Plugin {
             }
             </script>";
             
-        print_hidden("op", "pluginhandler");
-        print_hidden("method", "save");
-        print_hidden("plugin", "fever");
+        print \Controls\hidden_tag("op", "pluginhandler");
+        print \Controls\hidden_tag("method", "save");
+        print \Controls\hidden_tag("plugin", "fever");
 
         print "<input dojoType=\"dijit.form.ValidationTextBox\" required=\"1\" type=\"password\" name=\"password\" />";
         print "<button dojoType=\"dijit.form.Button\" type=\"submit\">" . __("Set Password") . "</button>";
