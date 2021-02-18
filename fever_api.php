@@ -277,8 +277,8 @@ class FeverAPI extends Handler {
         // TODO: ordering of child categories etc
         $groups = array();
 
-        $sth = $this->pdo->prepare("SELECT id, title, parent_cat
-                                    FROM ttrss_feed_categories, order_id
+        $sth = $this->pdo->prepare("SELECT id, title, parent_cat, order_id
+                                    FROM ttrss_feed_categories
                                     WHERE owner_uid = ?
                                     ORDER BY order_id ASC");
         $sth->execute([clean($_SESSION["uid"])]);
