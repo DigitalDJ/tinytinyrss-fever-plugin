@@ -277,7 +277,7 @@ class FeverAPI extends Handler {
         // TODO: ordering of child categories etc
         $groups = array();
 
-        $sth = $this->pdo->prepare("SELECT id, title, parent_cat
+        $sth = $this->pdo->prepare("SELECT id, title, parent_cat, order_id
                                     FROM ttrss_feed_categories
                                     WHERE owner_uid = ?
                                     ORDER BY order_id ASC");
@@ -294,10 +294,7 @@ class FeverAPI extends Handler {
                 {
                     $groupsToGroups[-1] = array();
                 }
-		if (isset($line["order_id"]) && isset($line["id"]))
-		{
-                	array_push($groupsToGroups[-1], $line["order_id"] . "-" . $line["id"]);
-		}
+                array_push($groupsToGroups[-1], $line["order_id"] . "-" . $line["id"]);
             }
             else
             {
@@ -305,10 +302,8 @@ class FeverAPI extends Handler {
                 {
                     $groupsToGroups[$line["parent_cat"]] = array();
                 }
-		if (isset($line["order_id"]) && isset($line["id"]))
-		{
-                	array_push($groupsToGroups[$line["parent_cat"]], $line["order_id"] . "-" . $line["id"]);
-		}
+               	array_push($groupsToGroups[$line["parent_cat"]], $line["order_id"] . "-" . $line["id"]);
+
             }
 
             $groupsToTitle[$line["id"]] = $line["title"];
