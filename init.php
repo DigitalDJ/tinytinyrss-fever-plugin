@@ -34,13 +34,9 @@ class Fever extends Plugin {
         print "<script type=\"dojo/method\" event=\"onSubmit\" args=\"evt\">
             evt.preventDefault();
             if (this.validate()) {
-                new Ajax.Request('backend.php', {
-                    parameters: dojo.objectToQuery(this.getValues()),
-                    onComplete: function(transport) {
-                        notify_info(transport.responseText);
-                    }
-                });
-                //this.reset();
+                xhrPost(\"backend.php\", this.getValues(), (transport) => {
+                            Notify.info(transport.responseText);
+                        })
             }
             </script>";
             
