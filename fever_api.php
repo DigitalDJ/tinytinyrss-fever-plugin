@@ -590,7 +590,7 @@ class FeverAPI extends Handler {
 
         while ($line = $sth->fetch())
         {            
-            $line_content = sanitize(
+            $line_content = Sanitizer::sanitize(
                                 $line["content"],
                                 param_to_bool($line['hide_images']),
                                 false, $line["site_url"], false, $line["id"]);
