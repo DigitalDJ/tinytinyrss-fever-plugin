@@ -2,13 +2,13 @@
 class Fever extends Plugin {
     private $host;
 
-    function about() {
+    function about(): array {
         return array(2.3,
             "Emulates the Fever API for Tiny Tiny RSS",
             "DigitalDJ, mestrode & murphy, eric-pierce");
     }
 
-    function init($host) {
+    function init($host): void {
         $this->host = $host;
         
         $host->add_hook($host::HOOK_PREFS_TAB, $this);
@@ -16,7 +16,7 @@ class Fever extends Plugin {
     
     /* plugins/main/init.php hook_prefs_tab */
 
-    function hook_prefs_tab($args) {
+    function hook_prefs_tab($args): void {
         if ($args != "prefPrefs") return;
 
         print "<div dojoType=\"dijit.layout.AccordionPane\" title=\"" . __("Fever Emulation") . "\">";
@@ -56,7 +56,7 @@ class Fever extends Plugin {
         print "</div>";
     }
 
-    function save()
+    function save(): void
     {
         if (isset($_POST["password"]) && isset($_SESSION["uid"]))
         {
@@ -71,8 +71,8 @@ class Fever extends Plugin {
         }
     }
     
-    function api_version() {
-        return 2;
+    function api_version(): int {
+        return 3;
     }
 }
 
