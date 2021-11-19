@@ -593,7 +593,7 @@ class FeverAPI extends Handler {
             $line_content = Sanitizer::sanitize(
                                 $line["content"],
                                 param_to_bool($line['hide_images']),
-                                false, $line["site_url"], false, $line["id"]);
+                                false, $line["site_url"], [false], $line["id"]);
             
             if ($this->add_attached_files){
                 $enclosures = Article::_get_enclosures($line["id"]);
