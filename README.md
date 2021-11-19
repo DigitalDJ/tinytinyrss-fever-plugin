@@ -181,3 +181,7 @@ v2.4 - 2021/02/16
 
 * Includes fixes by froks to fix for the latest changes in tiny-tiny-rss
 * Includes updates to account for the "Undefined array key' error upgrade from notice to warning in PHP8
+
+v3 - 2021/11/18
+
+* Updated to respect PHPStan Rule Level 6

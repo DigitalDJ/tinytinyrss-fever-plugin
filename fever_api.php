@@ -1,5 +1,5 @@
 <?php
-function param_to_bool($p) {
+function param_to_bool($p): bool {
 	return $p && ($p !== "f" && $p !== "false");
 }
 
@@ -26,7 +26,7 @@ class FeverAPI extends Handler {
     private $xml;
     
     // find the user in the db with a particular api key
-    private function setUser()
+    private function setUser(): void
     {        
         $apikey = isset($_REQUEST["api_key"]) ? clean($_REQUEST["api_key"]) : "";
         
@@ -77,7 +77,7 @@ class FeverAPI extends Handler {
     }
 
     // set whether xml or json
-    private function setXml()
+    private function setXml(): void
     {
         $this->xml = false;
         if (isset($_REQUEST["api"]))
@@ -89,7 +89,7 @@ class FeverAPI extends Handler {
         }
     }
     
-    private function setIdHack()
+    private function setIdHack(): void
     {
         $this->id_hack = false;
         
@@ -110,7 +110,7 @@ class FeverAPI extends Handler {
     }
     
     // validate the api_key, user preferences
-    function before($method) {
+    function before($method): bool {
         /* classes/api.php before */
         
         if (parent::before($method)) {
@@ -152,7 +152,7 @@ class FeverAPI extends Handler {
 
     // always include api_version, status as 'auth'
     // output json/xml
-    function wrap($status, $reply)
+    function wrap($status, $reply): void
     {
         /* classes/api.php wrap */
         $arr = array("api_version" => self::API_LEVEL,
@@ -189,7 +189,7 @@ class FeverAPI extends Handler {
 
     // fever supports xml wrapped in <response> tags
     // TODO: holy crap replace this junk
-    private function array_to_xml($array, $container = 'response', $is_root = true)
+    private function array_to_xml($array, $container = 'response', $is_root = true): string
     {
         if (!is_array($array)) return array_to_xml(array($array));
 
@@ -241,7 +241,7 @@ class FeverAPI extends Handler {
     }
 
     // every authenticated method includes last_refreshed_on_time
-    private function lastRefreshedOnTime()
+    private function lastRefreshedOnTime(): int
     {
         $sth = $this->pdo->prepare("SELECT " . SUBSTRING_FOR_DATE . "(last_updated,1,19) AS last_updated 
                                     FROM ttrss_feeds
@@ -261,7 +261,7 @@ class FeverAPI extends Handler {
         return $last_refreshed_on_time;
     }
 
-    private function flattenGroups(&$groupsToGroups, &$groups, &$groupsToTitle, $index)
+    private function flattenGroups(&$groupsToGroups, &$groups, &$groupsToTitle, $index): void
     {
         foreach ($groupsToGroups[$index] as $item)
         {
@@ -272,7 +272,7 @@ class FeverAPI extends Handler {
         }
     }
 
-    function getGroups()
+    function getGroups(): array
     {
         // TODO: ordering of child categories etc
         $groups = array();
@@ -320,7 +320,7 @@ class FeverAPI extends Handler {
         return $groups;
     }
 
-    function getFeeds()
+    function getFeeds(): array
     {
         $feeds = array();
 
@@ -344,7 +344,7 @@ class FeverAPI extends Handler {
         return $feeds;
     }
 
-    function getFavicons()
+    function getFavicons(): array
     {
         $favicons = array();
 
@@ -369,7 +369,7 @@ class FeverAPI extends Handler {
         return $favicons;
     }
 
-    function getLinks()
+    function getLinks(): array
     {
         // TODO: is there a 'hot links' alternative in ttrss?
         // use ttrss_user_entries / score > 0 / unread
@@ -459,7 +459,7 @@ class FeverAPI extends Handler {
         return $links;
     }
 
-    function formatBytes($bytes, $precision = 2) {
+    function formatBytes($bytes, $precision = 2): string {
         $units = array('B', 'KB', 'MB', 'GB', 'TB');
 
         $bytes = max($bytes, 0);
@@ -473,7 +473,7 @@ class FeverAPI extends Handler {
         return round($bytes, $precision) . ' ' . $units[$pow];
     }
 
-    function getItems()
+    function getItems(): array
     {
         // items from specific groups, feeds
         $items = array();
@@ -631,7 +631,7 @@ class FeverAPI extends Handler {
         return $items;
     }
 
-    function getTotalItems()
+    function getTotalItems(): int
     {
         // number of total items
         $total_items = 0;
@@ -649,7 +649,7 @@ class FeverAPI extends Handler {
         return $total_items;
     }
 
-    function getFeedsGroup()
+    function getFeedsGroup(): array
     {
         $feeds_groups = array();
 
@@ -683,7 +683,7 @@ class FeverAPI extends Handler {
         return $feeds_groups;
     }
 
-    function getUnreadItemIds()
+    function getUnreadItemIds(): string
     {
         $unreadItemIdsCSV = "";
         $sth = $this->pdo->prepare("SELECT ref_id
@@ -700,7 +700,7 @@ class FeverAPI extends Handler {
         return $unreadItemIdsCSV;
     }
 
-    function getSavedItemIds()
+    function getSavedItemIds(): string
     {
         $savedItemIdsCSV = "";
         $sth = $this->pdo->prepare("SELECT ref_id
@@ -717,7 +717,7 @@ class FeverAPI extends Handler {
         return $savedItemIdsCSV;
     }
 
-    function getEqualItems($id)
+    function getEqualItems($id): string
     {
         //get all ids which have identical links (Reference is found by id)
         $sth = $this->pdo->prepare("SELECT id 
@@ -741,7 +741,7 @@ class FeverAPI extends Handler {
         return $ids;
     }
 
-    function setItem($id, $field_raw, $mode)
+    function setItem($id, $field_raw, $mode): void
     {
         /* classes/api.php updateArticle */
         
@@ -790,30 +790,30 @@ class FeverAPI extends Handler {
         }
     }
 
-    function setItemAsRead($id)
+    function setItemAsRead($id): void
     {
         //action is true for all Equal Items
         $ids = $this->getEqualItems($id);
         $this->setItem($ids, 1, 0);
     }
 
-    function setItemAsUnread($id)
+    function setItemAsUnread($id): void
     {
         $ids = $this->getEqualItems($id);
         $this->setItem($ids, 1, 1);
     }
 
-    function setItemAsSaved($id)
+    function setItemAsSaved($id): void
     {
         $this->setItem($id, 0, 1);
     }
 
-    function setItemAsUnsaved($id)
+    function setItemAsUnsaved($id): void
     {
         $this->setItem($id, 0, 0);
     }
 
-    function setFeed($id, $cat, $before=0)
+    function setFeed($id, $cat, $before=0): void
     {
         /* classes/feeds.php catchup_feed */
         
@@ -863,18 +863,18 @@ class FeverAPI extends Handler {
         }
     }
 
-    function setFeedAsRead($id, $before)
+    function setFeedAsRead($id, $before): void
     {
         $this->setFeed($id, false, $before);
     }
 
-    function setGroupAsRead($id, $before)
+    function setGroupAsRead($id, $before): void
     {
         $this->setFeed($id, true, $before);
     }
 
     // this does all the processing, since the fever api does not have a specific variable that specifies the operation
-    function index()
+    function index(): void
     {
         $response_arr = array();
 
@@ -926,7 +926,7 @@ class FeverAPI extends Handler {
 
     }
     
-    function markId($id)
+    function markId($id): void
     {
         if (is_numeric($id))
         {
