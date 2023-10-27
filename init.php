@@ -40,7 +40,7 @@ class Fever extends Plugin {
             }
             </script>";
             
-        print \Controls\hidden_tag("op", "pluginhandler");
+        print \Controls\hidden_tag("op", "PluginHandler");
         print \Controls\hidden_tag("method", "save");
         print \Controls\hidden_tag("plugin", "fever");
 
