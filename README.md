@@ -185,3 +185,7 @@ v2.4 - 2021/02/16
 v3 - 2021/11/18
 
 * Updated to respect PHPStan Rule Level 6
+
+v3.1 - 2023/10/27
+
+* Adding support for PSR-4 class autoloader
